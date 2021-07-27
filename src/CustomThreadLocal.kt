@@ -10,7 +10,7 @@ class CustomThreadLocal<T>(private var value: T) {
         val table: ConcurrentMap<Thread, CustomThreadLocalHashMap> = ConcurrentHashMap()
     }
 
-    val uuid = UUID.randomUUID()
+    private val uuid: UUID = UUID.randomUUID()
 
     fun get(): T? {
         val threadLocalTable = table.getOrPut(currentThread(), {CustomThreadLocalHashMap()})
@@ -28,29 +28,30 @@ class CustomThreadLocal<T>(private var value: T) {
     }
 
 
-    private class CustomThreadLocalSavedValue(k : CustomThreadLocal<*>, private val v: Any?) : WeakReference<CustomThreadLocal<*>>(k) {
+    private class CustomThreadLocalSavedValue(k : CustomThreadLocal<*>, public var v: Any?) : WeakReference<CustomThreadLocal<*>>(k) {
     }
 
     private class CustomThreadLocalHashMap  {
-        private val loadFactor = 2/3
-        private var threshold = 16 * loadFactor
         private val table: MutableMap<UUID, CustomThreadLocalSavedValue> = HashMap()
 
 
         fun getOrPut(key: UUID, value: Any?, customThreadLocal: CustomThreadLocal<*>): Any? {
-            return table[key] ?: value.also { x -> put(key, x, customThreadLocal) }
+            return table[key]?.v ?: value.also { x -> put(key, x, customThreadLocal) }
         }
 
-        fun put(key: UUID, value: Any?, customThreadLocal: CustomThreadLocal<*>): CustomThreadLocalSavedValue? {
-            if (table.size + 1 == threshold) {
+        fun put(key: UUID, value: Any?, customThreadLocal: CustomThreadLocal<*>) {
+            if (table.size % 2 == 0) {
                 deleteUnusedValues()
-                threshold *= loadFactor * 2
             }
-            return table.put(key, CustomThreadLocalSavedValue(customThreadLocal, value))
+            val savedValue =  table[key]
+            if (savedValue == null) {
+                table[key] = CustomThreadLocalSavedValue(customThreadLocal, value)
+            }
+            savedValue?.v = value
         }
 
          fun remove(key: UUID): Any? {
-            return table.remove(key)?.get()
+            return table.remove(key)?.v
         }
 
         private fun deleteUnusedValues() {
