@@ -8,6 +8,8 @@ fun main() {
         println("thread(): ${Thread.currentThread()} threadLocal: ${threadLocal.get()}")
         Thread.sleep(3000)
         println("thread(): ${Thread.currentThread()} threadLocal: ${threadLocal.get()}")
+        threadLocal.remove()
+        println("thread(): ${Thread.currentThread()} threadLocal: ${threadLocal.get()}")
     }
     println("thread(): ${Thread.currentThread()} threadLocal: ${threadLocal.get()}")
     Thread.sleep(500)
